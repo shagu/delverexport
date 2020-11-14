@@ -16,11 +16,12 @@ Grab the latest [Delver Lens APK](https://apkpure.com/de/magic-the-gathering-mtg
 Copy the file `res/raw/data.db` of it as `delver.sqlite` into this directory.
 
 This directory should now look like this:
-    - ./delver.sqlite
-    - ./mycards.sqlite
-    - ./main.lua
-    - ./README.md
-    - ./LICENSE
+
+  - ./delver.sqlite
+  - ./mycards.sqlite
+  - ./main.lua
+  - ./README.md
+  - ./LICENSE
 
 ## Run
 
