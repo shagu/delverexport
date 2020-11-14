@@ -11,10 +11,11 @@ your collection on a PC, and also to share it with friends who don't have an and
 
 ## Setup Databases
 
-Export delver lens file from smartphone and save as mycards.sqlite.
-Grab the latest [Delver Lens APK](https://apkpure.com/de/magic-the-gathering-mtg-card-scanner-delver-lens/delverslab.delverlens/), unpack it and save the file `res/raw/data.db` as `delver.sqlite`.
+Export a Delver Lens file from your smartphone app and copy it to this directory as `mycards.sqlite`.
+Grab the latest [Delver Lens APK](https://apkpure.com/de/magic-the-gathering-mtg-card-scanner-delver-lens/delverslab.delverlens/) and unpack it.
+Copy the file `res/raw/data.db` of it as `delver.sqlite` into this directory.
 
-Your directory should now look like this:
+This directory should now look like this:
     - ./delver.sqlite
     - ./mycards.sqlite
     - ./main.lua
