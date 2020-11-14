@@ -6,7 +6,7 @@ your collection on a PC, and also to share it with friends who don't have an and
 
 ## Dependencies
 
-    pacman -Sy sqlite3 luarocks
+    pacman -Sy lua sqlite3 luarocks
     luarocks install lsqlite3
 
 ## Setup Databases
