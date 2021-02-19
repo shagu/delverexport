@@ -101,7 +101,7 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
     -- transform data to lua table
     local gatherer = json.decode(data)
     for card, data in pairs(gatherer.cards) do
-      if data.names then
+      if data.names and multiverse < 1 then
         for k, name in pairs(data.names) do
           if (string.find(name,b) or string.find(b,name)) and data.multiverseid then
             multiverse = data.multiverseid
