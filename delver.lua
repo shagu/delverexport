@@ -79,7 +79,7 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
   end
 
   -- multi-sided
-  local _, _, a, b = string.find(name, "(.+)//(.+)")
+  local _, _, a, b = string.find(name, "(.+) // (.+)")
   if a and b then -- scan for double-cards
     -- obtain data from online resource or caches
     local data = nil
