@@ -103,9 +103,10 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
     for card, data in pairs(gatherer.cards) do
       if data.names then
         for k, name in pairs(data.names) do
-          if string.find(name,b) or string.find(b,name) then
+          if string.find(name,b) or string.find(b,name) and data.multiverseid then
             multiverse = data.multiverseid
             print("Assuming '" .. multiverse .. "' for '" .. name .. "'.")
+            break
           end
         end
       end
@@ -133,7 +134,8 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
     for card, data in pairs(gatherer.cards) do
       if ( data.name == name or multiverseid < 1 ) and data.multiverseid then
         multiverse = data.multiverseid
-        print("Assuming '" .. multiverse .. "'  for '" .. name .. "'." ..  mcards.card)      end
+        print("Assuming '" .. multiverse .. "'  for '" .. name .. "'." ..  mcards.card)
+      end
     end
   end
 
@@ -229,6 +231,10 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
 
   -- build collection
   local filename = string.format("/%s - %s (%s).jpg", date, multiverse, quantity)
+
+  -- if io.open("collection" .. filename) then
+  --   print("ERROR: " .. filename .. " already exists.")
+  -- end
 
   local file = io.open("collection" .. filename, "w")
   file:write(cardimage)
