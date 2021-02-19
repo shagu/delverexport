@@ -103,7 +103,7 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
     for card, data in pairs(gatherer.cards) do
       if data.names then
         for k, name in pairs(data.names) do
-          if string.find(name,b) or string.find(b,name) and data.multiverseid then
+          if (string.find(name,b) or string.find(b,name)) and data.multiverseid then
             multiverse = data.multiverseid
             print("Assuming '" .. multiverse .. "' for '" .. name .. "'.")
             break
@@ -135,6 +135,7 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
       if ( data.name == name or multiverseid < 1 ) and data.multiverseid then
         multiverse = data.multiverseid
         print("Assuming '" .. multiverse .. "'  for '" .. name .. "'." ..  mcards.card)
+        break
       end
     end
   end
