@@ -88,7 +88,7 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
       data = cache:read("*all")
       cache:close()
     else
-      data = https.request("https://api.magicthegathering.io/v1/cards/?name=" .. a)
+      data = https.request("https://api.magicthegathering.io/v1/cards/?name=" .. string.gsub(a, "%s+", "%%20"))
     end
 
     -- write cache to speed up next run
