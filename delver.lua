@@ -134,7 +134,7 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
     for card, data in pairs(gatherer.cards) do
       if ( data.name == name or multiverseid < 1 ) and data.multiverseid then
         multiverse = data.multiverseid
-        print("Assuming '" .. multiverse .. "'  for '" .. name .. "'." ..  mcards.card)
+        print("Assuming '" .. multiverse .. "'  for '" .. name)
         break
       end
     end
