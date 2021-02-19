@@ -3,7 +3,7 @@
 This script allows to export delver lens database content to plain files.
 It makes use of the builtin card database of the app in order to export a
 personal backup file into image files. It uses the magicthegathering.io API
-to retreive card information and to download stock images of the cards. 
+to retreive card information and to download stock images of the cards.
 There will be 4 folders created:
 
   - images/
@@ -14,7 +14,7 @@ There will be 4 folders created:
       The API data retrieved from magicthegathering.io
   - collection/
       The actual collection of your cards, named according to your settings.
- 
+
 Dependencies:
 
   - luarocks install luasec
@@ -24,7 +24,7 @@ Dependencies:
 ]]--
 
 -- configuration
-local preferscan = nil -- prefer scans in collection? 
+local preferscan = nil -- prefer scans in collection?
 
 -- load modules
 local sqlite3 = require('lsqlite3')
@@ -60,9 +60,9 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
   io.write(math.floor(current / count * 1000 + .5)/10 .. "% [" .. current .. "/" .. count .. "]")
   io.flush()
   current = current + 1
-  
+
   local basename, name, image, cmc, color
-  
+
   -- read delver backup values
   local quantity = mcards.quantity
   local language = mcards.language
@@ -72,7 +72,7 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
   local multiverse
   for dcards in delver:nrows("SELECT * FROM cards WHERE _id = " .. mcards.card .. ";") do
     multiverse = dcards.multiverseid
-    
+
     for dnames in delver:nrows("SELECT * FROM names WHERE _id = " .. dcards.name .. ";") do
       name = dnames.name
     end
@@ -84,20 +84,20 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
     -- obtain data from online resource or caches
     local data = nil
     local cache = io.open(string.format("json/cards/0-%s+%s.json", a, b), "rb")
-    if cache then 
+    if cache then
       data = cache:read("*all")
       cache:close()
-    else 
+    else
       data = https.request("https://api.magicthegathering.io/v1/cards/?name=" .. a)
     end
-  
+
     -- write cache to speed up next run
     if not cache then
       local file = io.open(string.format("json/cards/0-%s+%s.json", a, b), "w")
       file:write(data)
       file:close()
     end
-  
+
     -- transform data to lua table
     local gatherer = json.decode(data)
     for card, data in pairs(gatherer.cards) do
@@ -114,22 +114,22 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
     -- obtain data from online resource or caches
     local data = nil
     local cache = io.open(string.format("json/cards/0-%s.json", name), "rb")
-    if cache then 
+    if cache then
       data = cache:read("*all")
       cache:close()
-    else 
+    else
       data = https.request("https://api.magicthegathering.io/v1/cards/?name=" .. string.gsub(name, "%s+", "%%20"))
     end
-  
+
     -- write cache to speed up next run
     if not cache then
       local file = io.open(string.format("json/cards/0-%s.json", name), "w")
       file:write(data)
       file:close()
     end
-    
+
     local gatherer = json.decode(data)
-    
+
     for card, data in pairs(gatherer.cards) do
       if ( data.name == name or multiverseid < 1 ) and data.multiverseid then
         multiverse = data.multiverseid
@@ -140,20 +140,20 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
   -- obtain data from online resource or caches
   local data = nil
   local cache = io.open("json/cards/" .. multiverse .. ".json", "rb")
-  if cache then 
+  if cache then
     data = cache:read("*all")
     cache:close()
-  else 
+  else
     data = https.request("https://api.magicthegathering.io/v1/cards/" .. multiverse)
   end
-  
+
   -- write cache to speed up next run
   if not cache then
     local file = io.open(string.format("json/cards/%s.json", multiverse), "w")
     file:write(data)
     file:close()
   end
-  
+
   -- transform data to lua table
   local gatherer = json.decode(data)
 
@@ -175,39 +175,39 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
       end
     end
   end
-  
+
   -- get set information from online resource or caches
   local setdata = nil
   local cache = io.open("json/sets/"..set..".json", "rb")
-  if cache then 
+  if cache then
     setdata = cache:read("*all")
     cache:close()
   else
     setdata = https.request("https://api.magicthegathering.io/v1/sets/"..set)
   end
-  
+
   -- write cache to speed up next run
   if not cache then
     local file = io.open(string.format("json/sets/%s.json", set), "w")
     file:write(setdata)
     file:close()
   end
-  
+
   local date = "0000-00-00"
   if setdata then
     local gathererset = json.decode(setdata)
     date = gathererset.set.releaseDate or date
   end
-  
-  -- write scanned images   
+
+  -- write scanned images
   local file = io.open("scans/" .. multiverse .. ".jpg", "w")
   file:write(scan)
   file:close()
-    
+
   -- download stock images
   if not io.open("images/" .. multiverse .. ".jpg") then
     local download = https.request(image)
-    
+
     if download then
       local file = io.open("images/" .. multiverse .. ".jpg", "w")
       file:write(download)
@@ -216,7 +216,7 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
       print("WARNING: No Image found for: " .. multiverse)
     end
   end
-  
+
   -- select the prefered image to write
   local cardimage = scan
   if not preferscan then
@@ -226,9 +226,10 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
       file:close()
     end
   end
-  
+
   -- build collection
-  local filename = string.format("/%s - %s (%s).jpg", date, multiverse, quantity)  
+  local filename = string.format("/%s - %s (%s).jpg", date, multiverse, quantity)
+
   local file = io.open("collection" .. filename, "w")
   file:write(cardimage)
   file:close()
