@@ -4,16 +4,6 @@ This script allows to export delver lens database content to plain files.
 It makes use of the builtin card database of the app in order to export a
 personal backup file into image files. It uses the magicthegathering.io API
 to retreive card information and to download stock images of the cards.
-There will be 4 folders created:
-
-  - images/
-      The stock images of your cards
-  - scans/
-      The scanned images of your cards
-  - json/
-      The API data retrieved from magicthegathering.io
-  - collection/
-      The actual collection of your cards, named according to your settings.
 
 Dependencies:
 
@@ -38,10 +28,10 @@ end
 
 -- create output directories
 os.execute("mkdir -p collection/")
-os.execute("mkdir -p images/")
-os.execute("mkdir -p scans/")
-os.execute("mkdir -p json/cards")
-os.execute("mkdir -p json/sets")
+os.execute("mkdir -p cache/images/")
+os.execute("mkdir -p cache/scans/")
+os.execute("mkdir -p cache/json/cards")
+os.execute("mkdir -p cache/json/sets")
 
 -- load sqlite databases
 local delver = sqlite3.open("./cache/delver.sqlite")
@@ -83,7 +73,7 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
   if a and b then -- scan for double-cards
     -- obtain data from online resource or caches
     local data = nil
-    local cache = io.open(string.format("json/cards/0-%s+%s.json", a, b), "rb")
+    local cache = io.open(string.format("cache/json/cards/0-%s+%s.json", a, b), "rb")
     if cache then
       data = cache:read("*all")
       cache:close()
@@ -93,7 +83,7 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
 
     -- write cache to speed up next run
     if not cache then
-      local file = io.open(string.format("json/cards/0-%s+%s.json", a, b), "w")
+      local file = io.open(string.format("cache/json/cards/0-%s+%s.json", a, b), "w")
       file:write(data)
       file:close()
     end
@@ -114,7 +104,7 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
   elseif multiverse < 1 then -- scan by name for unknown cards
     -- obtain data from online resource or caches
     local data = nil
-    local cache = io.open(string.format("json/cards/0-%s.json", name), "rb")
+    local cache = io.open(string.format("cache/json/cards/0-%s.json", name), "rb")
     if cache then
       data = cache:read("*all")
       cache:close()
@@ -124,7 +114,7 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
 
     -- write cache to speed up next run
     if not cache then
-      local file = io.open(string.format("json/cards/0-%s.json", name), "w")
+      local file = io.open(string.format("cache/json/cards/0-%s.json", name), "w")
       file:write(data)
       file:close()
     end
@@ -142,7 +132,7 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
 
   -- obtain data from online resource or caches
   local data = nil
-  local cache = io.open("json/cards/" .. multiverse .. ".json", "rb")
+  local cache = io.open("cache/json/cards/" .. multiverse .. ".json", "rb")
   if cache then
     data = cache:read("*all")
     cache:close()
@@ -152,7 +142,7 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
 
   -- write cache to speed up next run
   if not cache then
-    local file = io.open(string.format("json/cards/%s.json", multiverse), "w")
+    local file = io.open(string.format("cache/json/cards/%s.json", multiverse), "w")
     file:write(data)
     file:close()
   end
@@ -181,7 +171,7 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
 
   -- get set information from online resource or caches
   local setdata = nil
-  local cache = io.open("json/sets/"..set..".json", "rb")
+  local cache = io.open("cache/json/sets/"..set..".json", "rb")
   if cache then
     setdata = cache:read("*all")
     cache:close()
@@ -191,7 +181,7 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
 
   -- write cache to speed up next run
   if not cache then
-    local file = io.open(string.format("json/sets/%s.json", set), "w")
+    local file = io.open(string.format("cache/json/sets/%s.json", set), "w")
     file:write(setdata)
     file:close()
   end
@@ -203,16 +193,16 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
   end
 
   -- write scanned images
-  local file = io.open("scans/" .. multiverse .. ".jpg", "w")
+  local file = io.open("cache/scans/" .. multiverse .. ".jpg", "w")
   file:write(scan)
   file:close()
 
   -- download stock images
-  if not io.open("images/" .. multiverse .. ".jpg") then
+  if not io.open("cache/images/" .. multiverse .. ".jpg") then
     local download = https.request(image)
 
     if download then
-      local file = io.open("images/" .. multiverse .. ".jpg", "w")
+      local file = io.open("cache/images/" .. multiverse .. ".jpg", "w")
       file:write(download)
       file:close()
     else
@@ -223,7 +213,7 @@ for mcards in mycard:nrows("SELECT * FROM cards;") do
   -- select the prefered image to write
   local cardimage = scan
   if not preferscan then
-    local file = io.open("images/" .. multiverse .. ".jpg")
+    local file = io.open("cache/images/" .. multiverse .. ".jpg")
     if file then
       cardimage = file:read("*all")
       file:close()
