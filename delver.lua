@@ -32,7 +32,7 @@ local https = require("ssl.https")
 local json = require ("dkjson")
 
 -- check if delver lens files exist
-if not io.open("./mycards.sqlite") or not io.open("./delver.sqlite") then
+if not io.open("./cache/cards.sqlite") or not io.open("./cache/delver.sqlite") then
  return
 end
 
@@ -44,8 +44,8 @@ os.execute("mkdir -p json/cards")
 os.execute("mkdir -p json/sets")
 
 -- load sqlite databases
-local delver = sqlite3.open("./delver.sqlite")
-local mycard = sqlite3.open("./mycards.sqlite")
+local delver = sqlite3.open("./cache/delver.sqlite")
+local mycard = sqlite3.open("./cache/cards.sqlite")
 
 -- detect overall number of cards
 local count, current = 0, 1
