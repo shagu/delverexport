@@ -7,23 +7,11 @@ This project is supposed to export a [Delver Lens](https://delverlab.com/) datab
     pacman -Sy lua sqlite3 luarocks
     luarocks install lsqlite3
 
-## Setup Databases
-
-Export a Delver Lens file from your smartphone app and copy it to this directory as `mycards.sqlite`.
-Grab the latest [Delver Lens APK](https://apkpure.com/de/magic-the-gathering-mtg-card-scanner-delver-lens/delverslab.delverlens/) and unpack it.
-Copy the file `res/raw/data.db` of it as `delver.sqlite` into this directory.
-
-This directory should now look like this:
-
-  - ./delver.sqlite
-  - ./mycards.sqlite
-  - ./main.lua
-  - ./README.md
-  - ./LICENSE
-
 ## Run
 
-    lua main.lua
+  1. Copy the latest APK of DelverLens into the `./input` directory.
+  2. Copy your DelverLens backup file into `./input`
+  3. Run `make`
 
 ## Thanks
 
