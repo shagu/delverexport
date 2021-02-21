@@ -5,12 +5,14 @@ This project is supposed to export a [Delver Lens](https://delverlab.com/) datab
 ## Dependencies
 
     pacman -Sy lua sqlite3 luarocks
+    luarocks install dkjson
+    luarocks install luasec
     luarocks install lsqlite3
 
 ## Run
 
   1. Copy the latest APK of DelverLens into the `./input` directory.
-  2. Copy your DelverLens backup file into `./input`
+  2. Copy your DelverLens backup file into the `./input` directory.
   3. Run `make`
 
 ## Thanks
