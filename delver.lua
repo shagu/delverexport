@@ -13,7 +13,7 @@ Dependencies:
 ]]--
 
 -- configuration
-local preferscan = nil -- prefer scans, skips gatherer downloads
+local preferscan = true -- prefer scans, skips gatherer downloads
 
 -- load modules
 local json = require ("dkjson")
@@ -39,6 +39,7 @@ local sqlmtgjson = sqlite3.open("./cache/mtgjson.sqlite")
 -- initialize vars
 local colormap = { R = "Red", U = "Blue", B = "Black", G = "Green", W = "White" }
 local collection = {}
+local files = {}
 local count = 0
 
 -- read all delverlens backup cards
@@ -161,13 +162,13 @@ for scryfall, card in pairs(collection) do
 end
 print("")
 
--- write collection
+-- prepare collection
 local id = 0
 for scryfall, card in pairs(collection) do
   id = id + 1
   io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
   io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
-  io.write(" - Write Collection ("..id.."/"..count..")")
+  io.write(" - Prepare Collection ("..id.."/"..count..")")
   io.flush()
 
   local scan -- read scan image
@@ -184,8 +185,8 @@ for scryfall, card in pairs(collection) do
     file:close()
   end
 
-  -- write card to collection
   local content = (preferscan and scan or image)
+
   if content then
     local color = card.color
     if not color then
@@ -197,19 +198,42 @@ for scryfall, card in pairs(collection) do
     end
 
     -- prepare collection filenames
-    local filename = string.format("%s, %s (%s).jpg", color, card.name_alt, card.name)
+    local filename = string.format("%s, %s (%s)", color, card.name_alt, card.name)
     if card.name == card.name_alt then
-      filename = string.format("%s, %s.jpg", color, card.name)
+      filename = string.format("%s, %s", color, card.name)
     end
 
     -- remove slashes in filename
     filename = string.gsub(filename, "/", "|")
-    filename = "collection/" .. filename
 
-    -- write to disk
-    local file = io.open(filename, "w")
-    file:write(content)
-    file:close()
+    -- create files
+    while card.count > 0 do
+      -- find next possible count
+      local count = 1
+      while files[string.format("%s (%s).%s", filename, count, "jpg")] do
+        count = count + 1
+      end
+
+      -- write to disk
+      files[string.format("%s (%s).%s", filename, count, "jpg")] = content
+      card.count = card.count - 1
+    end
   end
+end
+print("")
+
+-- write collection
+local id = 0
+for filename, content in pairs(files) do
+  id = id + 1
+  io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
+  io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
+  io.write(" - Write Collection ("..id..")")
+  io.flush()
+
+  -- write to disk
+  local file = io.open("collection/" .. filename, "w")
+  file:write(content)
+  file:close()
 end
 print("")
