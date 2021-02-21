@@ -8,18 +8,17 @@ to retreive card information and to download stock images of the cards.
 Dependencies:
 
   - luarocks install luasec
-  - luarocks install dkjson
   - luarocks install lsqlite3
-
+  - luarocks install dkjson
 ]]--
 
 -- configuration
-local preferscan = nil -- prefer scans in collection?
+local preferscan = nil -- prefer scans, skips gatherer downloads
 
 -- load modules
-local sqlite3 = require('lsqlite3')
-local https = require("ssl.https")
 local json = require ("dkjson")
+local https = require("ssl.https")
+local sqlite3 = require('lsqlite3')
 
 -- check if delver lens files exist
 if not io.open("./cache/cards.sqlite") or not io.open("./cache/delver.sqlite") then
@@ -30,204 +29,187 @@ end
 os.execute("mkdir -p collection/")
 os.execute("mkdir -p cache/images/")
 os.execute("mkdir -p cache/scans/")
-os.execute("mkdir -p cache/json/cards")
-os.execute("mkdir -p cache/json/sets")
+os.execute("mkdir -p cache/data/")
 
 -- load sqlite databases
-local delver = sqlite3.open("./cache/delver.sqlite")
-local mycard = sqlite3.open("./cache/cards.sqlite")
+local sqldelver = sqlite3.open("./cache/delver.sqlite")
+local sqlcards = sqlite3.open("./cache/cards.sqlite")
+local sqlmtgjson = sqlite3.open("./cache/mtgjson.sqlite")
 
--- detect overall number of cards
-local count, current = 0, 1
-for mcards in mycard:nrows("SELECT COUNT(*) AS count from cards;") do
-  count = mcards.count
-end
+-- initialize vars
+local colormap = { R = "Red", U = "Blue", B = "Black", G = "Green", W = "White" }
+local collection = {}
+local count = 0
 
--- main loop
-for mcards in mycard:nrows("SELECT * FROM cards;") do
-  -- show progress
-  io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
-  io.write(math.floor(current / count * 1000 + .5)/10 .. "% [" .. current .. "/" .. count .. "]")
-  io.flush()
-  current = current + 1
+-- read all delverlens backup cards
+for card in sqlcards:nrows("SELECT * FROM cards;") do
+  io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
+  io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
+  io.write(" - Loading Collection (" .. count .. ")")
 
-  local basename, name, image, cmc, color
+  for delver in sqldelver:nrows("SELECT * FROM cards WHERE _id = " .. card.card .. ";") do
 
-  -- read delver backup values
-  local quantity = mcards.quantity
-  local language = mcards.language
-  local scan = mcards.image
-
-  -- detect multiverse id
-  local multiverse
-  for dcards in delver:nrows("SELECT * FROM cards WHERE _id = " .. mcards.card .. ";") do
-    multiverse = dcards.multiverseid
-
-    for dnames in delver:nrows("SELECT * FROM names WHERE _id = " .. dcards.name .. ";") do
-      name = dnames.name
-    end
-  end
-
-  -- multi-sided
-  local _, _, a, b = string.find(name, "(.+) // (.+)")
-  if a and b then -- scan for double-cards
-    -- obtain data from online resource or caches
-    local data = nil
-    local cache = io.open(string.format("cache/json/cards/0-%s+%s.json", a, b), "rb")
-    if cache then
-      data = cache:read("*all")
-      cache:close()
-    else
-      data = https.request("https://api.magicthegathering.io/v1/cards/?name=" .. string.gsub(a, "%s+", "%%20"))
-    end
-
-    -- write cache to speed up next run
-    if not cache then
-      local file = io.open(string.format("cache/json/cards/0-%s+%s.json", a, b), "w")
-      file:write(data)
+    -- export scan image
+    if card.image then
+      local file = io.open("cache/scans/" .. delver.scryfall_id .. ".jpg", "w")
+      file:write(card.image)
       file:close()
     end
 
-    -- transform data to lua table
-    local gatherer = json.decode(data)
-    for card, data in pairs(gatherer.cards) do
-      if data.names and multiverse < 1 then
-        for k, name in pairs(data.names) do
-          if (string.find(name,b) or string.find(b,name)) and data.multiverseid then
-            multiverse = data.multiverseid
-            print("Assuming '" .. multiverse .. "' for '" .. name .. "'.")
-            break
-          end
+    -- write data table
+    if collection[delver.scryfall_id] then
+      collection[delver.scryfall_id].count = collection[delver.scryfall_id].count + card.quantity
+    else
+      collection[delver.scryfall_id] = { lang = card.language, count = card.quantity }
+      count = count + 1
+    end
+  end
+end
+print("")
+
+-- improve card info with mtgjson data
+local id = 0
+for scryfall, card in pairs(collection) do
+  id = id + 1
+  io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
+  io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
+  io.write(" - Loading MTGJSON Card Details ("..id.."/"..count..")")
+  io.flush()
+
+  -- read caches where possible
+  local cache = io.open(string.format("cache/data/%s.json", scryfall), "rb")
+  if cache then
+    collection[scryfall] = json.decode(cache:read("*all"))
+    cache:close()
+  else
+    -- add mtgjson data to card
+    for mtgjson in sqlmtgjson:nrows("SELECT * FROM cards WHERE scryfallId = '" .. scryfall .. "'") do
+      card.multiverse = mtgjson.multiverseId
+      card.rarity = mtgjson.rarity
+      card.types = mtgjson.types
+      card.subtypes = mtgjson.subtypes
+
+      card.set = mtgjson.setCode
+      card.rarity = mtgjson.rarity
+
+      card.cmc = mtgjson.convertedManaCost
+
+      card.name = mtgjson.name
+      card.name_alt = mtgjson.name
+
+      card.color = mtgjson.colorIdentity
+
+      -- try to get best multiverse
+      if not card.multiverse then
+        for alternate in sqlmtgjson:nrows("SELECT multiverseid FROM cards WHERE scryfallOracleId = '" .. mtgjson.scryfallOracleId .. "'") do
+          card.multiverse = card.multiverse or alternate.multiverseId
         end
       end
-    end
-  elseif multiverse < 1 then -- scan by name for unknown cards
-    -- obtain data from online resource or caches
-    local data = nil
-    local cache = io.open(string.format("cache/json/cards/0-%s.json", name), "rb")
-    if cache then
-      data = cache:read("*all")
-      cache:close()
-    else
-      data = https.request("https://api.magicthegathering.io/v1/cards/?name=" .. string.gsub(name, "%s+", "%%20"))
-    end
 
-    -- write cache to speed up next run
-    if not cache then
-      local file = io.open(string.format("cache/json/cards/0-%s.json", name), "w")
-      file:write(data)
-      file:close()
-    end
+      card.imgurl_alt = card.multiverse and "https://gatherer.wizards.com/Handlers/Image.ashx?type=card&multiverseid=" .. card.multiverse
 
-    local gatherer = json.decode(data)
-
-    for card, data in pairs(gatherer.cards) do
-      if ( data.name == name or multiverseid < 1 ) and data.multiverseid then
-        multiverse = data.multiverseid
-        print("Assuming '" .. multiverse .. "'  for '" .. name)
-        break
+      -- read locale data
+      for locale in sqlmtgjson:nrows("SELECT name, multiverseid FROM foreign_data WHERE uuid = '" .. mtgjson.uuid .. "' AND language = '" .. card.lang .. "'") do
+        card.name = locale.name
+        card.imgurl = locale.multiverseid and "https://gatherer.wizards.com/Handlers/Image.ashx?type=card&multiverseid=" .. locale.multiverseid
       end
+
+      -- read set data
+      for set in sqlmtgjson:nrows("SELECT name, releaseDate FROM sets WHERE code = '" .. card.set .. "'") do
+        card.date = set.releaseDate
+        card.setname = set.name
+      end
+
+      -- set fallbacks
+      card.name = card.name or card.name_alt
+      card.imgurl = card.imgurl or card.imgurl_alt
     end
-  end
 
-  -- obtain data from online resource or caches
-  local data = nil
-  local cache = io.open("cache/json/cards/" .. multiverse .. ".json", "rb")
-  if cache then
-    data = cache:read("*all")
-    cache:close()
-  else
-    data = https.request("https://api.magicthegathering.io/v1/cards/" .. multiverse)
-  end
-
-  -- write cache to speed up next run
-  if not cache then
-    local file = io.open(string.format("cache/json/cards/%s.json", multiverse), "w")
-    file:write(data)
+    -- write data cache
+    local file = io.open(string.format("cache/data/%s.json", scryfall), "w")
+    file:write(json.encode(card))
     file:close()
   end
-
-  -- transform data to lua table
-  local gatherer = json.decode(data)
-
-  -- load data from json
-  local name = gatherer.card.name
-  local locname = gatherer.card.name
-  local image = gatherer.card.imageUrl
-  local cmc = gatherer.card.cmc
-  local color = gatherer.card.color
-  local set = gatherer.card.set
-
-  -- read proper content for localized cards
-  local realmultiverse = multiverse
-  if gatherer.card.foreignNames then
-    for loc, data in pairs(gatherer.card.foreignNames) do
-      if data.language == language then
-        locname = data.name or name
-        image = data.imageUrl or image
-      end
-    end
-  end
-
-  -- get set information from online resource or caches
-  local setdata = nil
-  local cache = io.open("cache/json/sets/"..set..".json", "rb")
-  if cache then
-    setdata = cache:read("*all")
-    cache:close()
-  else
-    setdata = https.request("https://api.magicthegathering.io/v1/sets/"..set)
-  end
-
-  -- write cache to speed up next run
-  if not cache then
-    local file = io.open(string.format("cache/json/sets/%s.json", set), "w")
-    file:write(setdata)
-    file:close()
-  end
-
-  local date = "0000-00-00"
-  if setdata then
-    local gathererset = json.decode(setdata)
-    date = gathererset.set.releaseDate or date
-  end
-
-  -- write scanned images
-  local file = io.open("cache/scans/" .. multiverse .. ".jpg", "w")
-  file:write(scan)
-  file:close()
-
-  -- download stock images
-  if not io.open("cache/images/" .. multiverse .. ".jpg") then
-    local download = https.request(image)
-
-    if download then
-      local file = io.open("cache/images/" .. multiverse .. ".jpg", "w")
-      file:write(download)
-      file:close()
-    else
-      print("WARNING: No Image found for: " .. multiverse)
-    end
-  end
-
-  -- select the prefered image to write
-  local cardimage = scan
-  if not preferscan then
-    local file = io.open("cache/images/" .. multiverse .. ".jpg")
-    if file then
-      cardimage = file:read("*all")
-      file:close()
-    end
-  end
-
-  -- build collection
-  local filename = string.format("/%s - %s (%s).jpg", date, multiverse, quantity)
-
-  -- if io.open("collection" .. filename) then
-  --   print("ERROR: " .. filename .. " already exists.")
-  -- end
-
-  local file = io.open("collection" .. filename, "w")
-  file:write(cardimage)
-  file:close()
 end
+print("")
+
+-- download gatherer images
+local id = 0
+for scryfall, card in pairs(collection) do
+  id = id + 1
+  io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
+  io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
+  io.write(" - Downloading Gatherer Artwork ("..id.."/"..count..")")
+  io.flush()
+
+  if not preferscan  and card.multiverse and not io.open("cache/images/" .. scryfall .. ".jpg") then
+    local image = https.request(card.imgurl)
+    image = image or https.request(card.imgurl_alt)
+
+    if image then
+      local file = io.open("cache/images/" .. scryfall .. ".jpg", "w")
+      file:write(image)
+      file:close()
+    else
+      print(string.format(" WARNING: No Image for '%s' (%s)", card.name, card.multiverse))
+    end
+  elseif not card.multiverse then
+    print(string.format(" WARNING: No Multiverse Entry for '%s'", card.name))
+  elseif preferscan then
+    io.write(" [Skipped]")
+  end
+end
+print("")
+
+-- write collection
+local id = 0
+for scryfall, card in pairs(collection) do
+  id = id + 1
+  io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
+  io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
+  io.write(" - Write Collection ("..id.."/"..count..")")
+  io.flush()
+
+  local scan -- read scan image
+  local file = io.open("cache/scans/" .. scryfall .. ".jpg", "rb")
+  if file then
+    scan = file:read("*all")
+    file:close()
+  end
+
+  local image -- read image image
+  local file = io.open("cache/images/" .. scryfall .. ".jpg", "rb")
+  if file then
+    image = file:read("*all")
+    file:close()
+  end
+
+  -- write card to collection
+  local content = (preferscan and scan or image)
+  if content then
+    local color = card.color
+    if not color then
+      color = "Artifact" -- artifacts
+    elseif string.find(color, "%,") then
+      color = "Multicolor" -- multicolor
+    elseif colormap[color]then
+      color = colormap[color]
+    end
+
+    -- prepare collection filenames
+    local filename = string.format("%s, %s (%s).jpg", color, card.name_alt, card.name)
+    if card.name == card.name_alt then
+      filename = string.format("%s, %s.jpg", color, card.name)
+    end
+
+    -- remove slashes in filename
+    filename = string.gsub(filename, "/", "|")
+    filename = "collection/" .. filename
+
+    -- write to disk
+    local file = io.open(filename, "w")
+    file:write(content)
+    file:close()
+  end
+end
+print("")
