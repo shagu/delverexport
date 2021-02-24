@@ -16,3 +16,6 @@ delver:
 
 clean:
 	rm -rf collection/*
+
+distclean: clean
+	rm -rf cache
