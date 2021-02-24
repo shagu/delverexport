@@ -13,3 +13,6 @@ update:
 delver:
 	@echo "Processing Card Collection"
 	@lua ./delver.lua
+
+clean:
+	rm -rf collection/*
