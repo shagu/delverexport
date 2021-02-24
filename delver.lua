@@ -15,6 +15,7 @@ Dependencies:
 -- configuration
 local preferscan = true -- prefer scans over gatherer images
 local fetchimage = nil -- set true to download gatherer images
+local fetchlang  = nil -- fetches language specific images where possible
 
 -- load modules
 local json = require ("dkjson")
@@ -128,7 +129,7 @@ for i, card in pairs(collection) do
   io.flush()
 
   if fetchimage and card.meta.multiverse and card.meta.imgurl and not io.open("cache/images/" .. card.scryfall .. ".jpg") then
-    local image = nil -- https.request(card.meta.imgurl_lang)
+    local image = fetchlang and https.request(card.meta.imgurl_lang)
     image = image or https.request(card.meta.imgurl)
 
     if image then
