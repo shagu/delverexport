@@ -1,4 +1,4 @@
-all: update delver
+all: update core
 
 update:
 	@echo "Preparing Caches"
@@ -10,7 +10,7 @@ update:
 	@echo " - Downloading MTGJSON Database"
 	@test -f cache/mtgjson.sqlite || curl -q --progress-bar https://mtgjson.com/api/v5/AllPrintings.sqlite -o cache/mtgjson.sqlite
 
-delver:
+core:
 	@echo "Processing Card Collection"
 	@lua ./core.lua
 
