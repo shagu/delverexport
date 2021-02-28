@@ -31,6 +31,11 @@ function delver:LoadBackup()
       images[string.format("%s,%s", scryfall, count)] = { scan = card.image }
       ccount = ccount - 1
 
+      -- export scans
+      local file = io.open("cache/scans/" .. string.format("%s,%s", scryfall, count) .. ".jpg", "w")
+      file:write(card.image)
+      file:close()
+
       -- show progress
       id = id + 1
       io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
