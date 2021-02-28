@@ -24,7 +24,6 @@ os.execute("mkdir -p cache/scans/")
 os.execute("mkdir -p cache/data/")
 
 -- initialize vars
-local colormap = { R = "Red", U = "Blue", B = "Black", G = "Green", W = "White" }
 local files = {}
 
 -- load delver lens backup file
@@ -39,58 +38,6 @@ local collection = mtgjson:Initialize(collection)
 local gatherer = require("gatherer")
 local images = gatherer:Fetch(collection, images)
 
--- prepare collection
-local id = 0
-for i, card in pairs(collection) do
-  id = id + 1
-  io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
-  io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
-  io.write(" - Prepare Collection ("..id..")")
-  io.flush()
-
-  local content = (preferscan and images[i]["scan"] or images[i]["stock"] or images[i]["scan"])
-
-  local color = card.color
-  if not color then
-    color = "Artifact" -- artifacts
-  elseif string.find(color, "%,") then
-    color = "Multicolor" -- multicolor
-  elseif colormap[color]then
-    color = colormap[color]
-  end
-
-  -- prepare collection filenames
-  local filename = string.format("%s, %s", color, card.name)
-  if card.name_lang then
-    filename = string.format("%s, %s (%s)", color, card.name, card.name_lang)
-  end
-
-  -- remove slashes in filename
-  filename = string.gsub(filename, "/", "|")
-
-  -- find next possible count
-  local count = 1
-  while files[string.format("%s (%s).%s", filename, count, "jpg")] do
-    count = count + 1
-  end
-
-  -- write to disk
-  files[string.format("%s (%s).%s", filename, count, "jpg")] = content
-end
-print("")
-
--- write collection
-local id = 0
-for filename, content in pairs(files) do
-  id = id + 1
-  io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
-  io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
-  io.write(" - Write Collection ("..id..")")
-  io.flush()
-
-  -- write to disk
-  local file = io.open("collection/" .. filename, "w")
-  file:write(content)
-  file:close()
-end
-print("")
+-- build filesystem collection
+local filesystem = require("filesystem")
+local _ = filesystem:Write(collection, images)
