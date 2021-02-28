@@ -1,6 +1,6 @@
 -- load delver backup file and turn it into tables
 local delver = {}
-function delver.LoadBackup()
+function delver:LoadBackup()
   -- skip without any required files
   if not io.open("./cache/cards.sqlite") or not io.open("./cache/delver.sqlite") then
     return nil
