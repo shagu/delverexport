@@ -39,8 +39,8 @@ local images = {}
 local files = {}
 
 -- load delver lens backup file
-local data = require("delver")
-local metadata, images = data and data[1], data and data[2]
+local delver = require("delver")
+local metadata, images = delver:LoadBackup()
 
 -- improve card info with mtgjson data
 local id = 0
