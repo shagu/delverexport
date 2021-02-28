@@ -36,11 +36,11 @@ local files = {}
 
 -- load delver lens backup file
 local delver = require("delver")
-local metadata, images = delver:LoadBackup()
+local collection, images = delver:LoadBackup()
 
 -- create collection with mgtjson data
 local mtgjson = require("mtgjson")
-local collection = mtgjson:Initialize(metadata)
+local collection = mtgjson:Initialize(collection)
 
 -- download gatherer images
 local gatherer = require("gatherer")
