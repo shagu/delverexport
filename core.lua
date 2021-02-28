@@ -17,18 +17,11 @@ local preferscan = true -- prefer scans over gatherer images
 local fetchimage = nil -- set true to download gatherer images
 local fetchlang  = nil -- fetches language specific images where possible
 
--- load modules
-local json = require ("dkjson")
-local https = require("ssl.https")
-local sqlite3 = require('lsqlite3')
-
 -- create output directories
 os.execute("mkdir -p collection/")
 os.execute("mkdir -p cache/images/")
 os.execute("mkdir -p cache/scans/")
 os.execute("mkdir -p cache/data/")
-
--- load sqlite databases
 
 -- initialize vars
 local colormap = { R = "Red", U = "Blue", B = "Black", G = "Green", W = "White" }
