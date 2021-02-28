@@ -1,18 +1,23 @@
--- initialize collection by enhancing import data with mtgjson fields
+-- enhance collection with mtgjson metadata
 local mtgjson = {}
-function mtgjson:Initialize(metadata)
+function mtgjson:Initialize(collection)
   local json = require ("dkjson")
   local sqlite3 = require('lsqlite3')
   local sqlmtgjson = sqlite3.open("./cache/mtgjson.sqlite")
-  local collection = {}
 
   local id = 0
-  for i, card in pairs(metadata) do
+  for i, card in pairs(collection) do
     id = id + 1
     io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
     io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
     io.write(" - Loading MTGJSON Card Details ("..id..")")
     io.flush()
+
+    -- backup original data
+    local original = {}
+    for k,v in pairs(card) do
+      original[k] = v
+    end
 
     -- read caches where possible
     local cache = io.open(string.format("cache/data/%s.json", card.scryfall), "rb")
@@ -62,9 +67,10 @@ function mtgjson:Initialize(metadata)
       file:close()
     end
 
-    -- attach original metadata
-    collection[i].scryfall = card.scryfall
-    collection[i].lang = card.lang
+    -- re-attach original metadata
+    for k,v in pairs(original) do
+      collection[i][k] = v
+    end
   end
   print()
 
