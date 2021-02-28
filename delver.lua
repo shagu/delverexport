@@ -41,81 +41,100 @@ local sqlmtgjson = sqlite3.open("./cache/mtgjson.sqlite")
 -- initialize vars
 local colormap = { R = "Red", U = "Blue", B = "Black", G = "Green", W = "White" }
 local collection = {}
+local metadata = {}
+local images = {}
 local files = {}
-local count = 0
 
 -- read all delverlens backup cards
 local id = 0
 for card in sqlcards:nrows("SELECT * FROM cards;") do
-  id = id + 1
-  io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
-  io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
-  io.write(" - Loading Collection (" .. id .. ")")
-
-  local scryfall
+  local scryfall, ccount = nil, card.quantity
   for delver in sqldelver:nrows("SELECT * FROM cards WHERE _id = " .. card.card .. ";") do
     scryfall = delver.scryfall_id
   end
 
-  table.insert(collection, { scan = card.image, count = card.quantity, scryfall = scryfall, lang = card.language })
+  while ccount > 0 do
+    -- find next possible count
+    local count = 1
+
+    while metadata[string.format("%s,%s", scryfall, count)] do
+      count = count + 1
+    end
+
+    -- save to collection
+    metadata[string.format("%s,%s", scryfall, count)] = { scryfall = scryfall, lang = card.language }
+    images[string.format("%s,%s", scryfall, count)] = { scan = card.image }
+    ccount = ccount - 1
+
+    -- show progress
+    id = id + 1
+    io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
+    io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
+    io.write(" - Loading Collection (" .. id .. ")")
+  end
 end
 print("")
 
 -- improve card info with mtgjson data
 local id = 0
-for i, card in pairs(collection) do
+for i, card in pairs(metadata) do
   id = id + 1
   io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
   io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
-  io.write(" - Loading MTGJSON Card Details ("..id.."/"..#collection..")")
+  io.write(" - Loading MTGJSON Card Details ("..id..")")
   io.flush()
 
   -- read caches where possible
   local cache = io.open(string.format("cache/data/%s.json", card.scryfall), "rb")
   if cache then
-    collection[i].meta = json.decode(cache:read("*all"))
+    -- load mtgjson data from cache
+    collection[i] = json.decode(cache:read("*all"))
     cache:close()
   else
-    -- add mtgjson data to card
+    -- load mtgjson data from sqlite
     for mtgjson in sqlmtgjson:nrows("SELECT * FROM cards WHERE scryfallId = '" .. card.scryfall .. "'") do
       -- attach card metadata
-      card.meta = card.meta or {}
-      card.meta.multiverse = mtgjson.multiverseId
-      card.meta.rarity = mtgjson.rarity
-      card.meta.types = mtgjson.types
-      card.meta.subtypes = mtgjson.subtypes
-      card.meta.set = mtgjson.setCode
-      card.meta.cmc = mtgjson.convertedManaCost
-      card.meta.name = mtgjson.name
-      card.meta.color = mtgjson.colorIdentity
+      collection[i] = {}
+      collection[i].multiverse = mtgjson.multiverseId
+      collection[i].rarity = mtgjson.rarity
+      collection[i].types = mtgjson.types
+      collection[i].subtypes = mtgjson.subtypes
+      collection[i].set = mtgjson.setCode
+      collection[i].cmc = mtgjson.convertedManaCost
+      collection[i].name = mtgjson.name
+      collection[i].color = mtgjson.colorIdentity
 
       -- try to get best multiverse
-      if not card.meta.multiverse then
+      if not collection[i].multiverse then
         for alternate in sqlmtgjson:nrows("SELECT multiverseid FROM cards WHERE scryfallOracleId = '" .. mtgjson.scryfallOracleId .. "'") do
-          card.meta.multiverse = card.meta.multiverse or alternate.multiverseId
+          collection[i].multiverse = collection[i].multiverse or alternate.multiverseId
         end
       end
 
-      card.meta.imgurl = card.meta.multiverse and "https://gatherer.wizards.com/Handlers/Image.ashx?type=card&multiverseid=" .. card.meta.multiverse
+      collection[i].imgurl = collection[i].multiverse and "https://gatherer.wizards.com/Handlers/Image.ashx?type=card&multiverseid=" .. collection[i].multiverse
 
       -- read locale data
       for locale in sqlmtgjson:nrows("SELECT name, multiverseid FROM foreign_data WHERE uuid = '" .. mtgjson.uuid .. "' AND language = '" .. card.lang .. "'") do
-        card.meta.name_lang = locale.name
-        card.meta.imgurl_lang = locale.multiverseid and "https://gatherer.wizards.com/Handlers/Image.ashx?type=card&multiverseid=" .. locale.multiverseid
+        collection[i].name_lang = locale.name
+        collection[i].imgurl_lang = locale.multiverseid and "https://gatherer.wizards.com/Handlers/Image.ashx?type=card&multiverseid=" .. locale.multiverseid
       end
 
       -- read set data
-      for set in sqlmtgjson:nrows("SELECT name, releaseDate FROM sets WHERE code = '" .. card.meta.set .. "'") do
-        card.meta.date = set.releaseDate
-        card.meta.setname = set.name
+      for set in sqlmtgjson:nrows("SELECT name, releaseDate FROM sets WHERE code = '" .. collection[i].set .. "'") do
+        collection[i].date = set.releaseDate
+        collection[i].setname = set.name
       end
     end
 
     -- write data cache
     local file = io.open(string.format("cache/data/%s.json", card.scryfall), "w")
-    file:write(json.encode(card.meta))
+    file:write(json.encode(collection[i]))
     file:close()
   end
+
+  -- attach original metadata
+  collection[i].scryfall = card.scryfall
+  collection[i].lang = card.lang
 end
 print("")
 
@@ -125,23 +144,23 @@ for i, card in pairs(collection) do
   id = id + 1
   io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
   io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
-  io.write(" - Downloading Gatherer Artwork ("..id.."/"..#collection..")")
+  io.write(" - Downloading Gatherer Artwork ("..id..")")
   io.flush()
 
-  if fetchimage and card.meta.multiverse and card.meta.imgurl and not io.open("cache/images/" .. card.scryfall .. ".jpg") then
-    local image = fetchlang and https.request(card.meta.imgurl_lang)
-    image = image or https.request(card.meta.imgurl)
+  if fetchimage and card.multiverse and card.imgurl and not io.open("cache/images/" .. card.scryfall .. ".jpg") then
+    local image = fetchlang and https.request(card.imgurl_lang)
+    image = image or https.request(card.imgurl)
 
     if image then
-      card.image = image
+      images[i]["stock"] = image
       local file = io.open("cache/images/" .. card.scryfall .. ".jpg", "w")
       file:write(image)
       file:close()
     else
-      print(string.format(" WARNING: No Image for '%s' (%s)", card.meta.name, card.meta.multiverse))
+      print(string.format(" WARNING: No Image for '%s' (%s)", card.name, card.multiverse))
     end
-  elseif not card.meta.multiverse then
-    print(string.format(" WARNING: No Multiverse Entry for '%s'", card.meta.name))
+  elseif not card.multiverse then
+    print(string.format(" WARNING: No Multiverse Entry for '%s'", card.name))
   end
 end
 print("")
@@ -152,12 +171,12 @@ for i, card in pairs(collection) do
   id = id + 1
   io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
   io.write("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
-  io.write(" - Prepare Collection ("..id.."/"..#collection..")")
+  io.write(" - Prepare Collection ("..id..")")
   io.flush()
 
-  local content = (preferscan and card.scan or card.image or card.scan)
+  local content = (preferscan and images[i]["scan"] or images[i]["stock"] or images[i]["scan"])
 
-  local color = card.meta.color
+  local color = card.color
   if not color then
     color = "Artifact" -- artifacts
   elseif string.find(color, "%,") then
@@ -167,26 +186,22 @@ for i, card in pairs(collection) do
   end
 
   -- prepare collection filenames
-  local filename = string.format("%s, %s", color, card.meta.name)
-  if card.meta.name_lang then
-    filename = string.format("%s, %s (%s)", color, card.meta.name, card.meta.name_lang)
+  local filename = string.format("%s, %s", color, card.name)
+  if card.name_lang then
+    filename = string.format("%s, %s (%s)", color, card.name, card.name_lang)
   end
 
   -- remove slashes in filename
   filename = string.gsub(filename, "/", "|")
 
-  -- create files
-  while card.count > 0 do
-    -- find next possible count
-    local count = 1
-    while files[string.format("%s (%s).%s", filename, count, "jpg")] do
-      count = count + 1
-    end
-
-    -- write to disk
-    files[string.format("%s (%s).%s", filename, count, "jpg")] = content
-    card.count = card.count - 1
+  -- find next possible count
+  local count = 1
+  while files[string.format("%s (%s).%s", filename, count, "jpg")] do
+    count = count + 1
   end
+
+  -- write to disk
+  files[string.format("%s (%s).%s", filename, count, "jpg")] = content
 end
 print("")
 
