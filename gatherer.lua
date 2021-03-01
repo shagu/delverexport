@@ -11,7 +11,8 @@ function gatherer:Fetch(collection, images)
     io.write(" - Downloading Gatherer Artwork ("..id..")")
     io.flush()
 
-    if card.multiverse and card.imgurl and not io.open("cache/images/" .. card.scryfall .. ".jpg") then
+    local cache = io.open("cache/images/" .. card.scryfall .. ".jpg")
+    if card.multiverse and card.imgurl and not cache then
       local image = fetchlang and https.request(card.imgurl_lang)
       image = image or https.request(card.imgurl)
 
@@ -23,12 +24,12 @@ function gatherer:Fetch(collection, images)
       else
         print(string.format(" WARNING: No Image for '%s' (%s)", card.name, card.multiverse))
       end
-    elseif not card.multiverse then
-      print(string.format(" WARNING: No Multiverse Entry for '%s'", card.name))
+    elseif cache then
+      cache:close()
     end
   end
 
-  print("")
+  print()
   return images
 end
 
