@@ -18,10 +18,11 @@ local fetchimage = nil -- set true to download gatherer images
 local fetchlang  = nil -- fetches language specific images where possible
 
 -- create output directories
-os.execute("mkdir -p collection/")
 os.execute("mkdir -p cache/images/")
 os.execute("mkdir -p cache/scans/")
 os.execute("mkdir -p cache/data/")
+os.execute("mkdir -p collection/")
+os.execute("mkdir -p www/img www/res")
 
 -- initialize vars
 local files = {}
@@ -41,3 +42,7 @@ local images = gatherer:Fetch(collection, images)
 -- build filesystem collection
 local filesystem = require("filesystem")
 local _ = filesystem:Write(collection, images)
+
+-- build html collection
+local html = require("html")
+local _ = html:Write(collection, images)
