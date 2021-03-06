@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Personal Magic Card Collection" />
   <title>MTG Card Collection</title>
 </head>
@@ -66,10 +67,7 @@ div.card-title {
   background-image: linear-gradient(to bottom, rgba(0,0,0,1), rgba(0,0,0,.7));
   border-bottom: 1px #333 solid;
   box-shadow: 0px 0px 10px #000;
-  display: flex;
-  align-items: stretch;
-  flex-direction: row;
-  flex-wrap: wrap;
+  min-width: 450px;
 }
 
 div.barsection {
@@ -85,7 +83,7 @@ div.barsection img {
   border: 2px #444 solid;
   border-radius: 50%;
   padding: 1px;
-  height: 28px;
+  height: 24px;
 }
 
 div.barsection img:hover {
@@ -100,7 +98,7 @@ div.barsection input {
   background: rgba(25,25,25,.9);
   cursor: pointer;
   margin-top: 5px;
-  width: calc(100% - 24px);
+  width: calc(100% - 20px);
 }
 
 div.barsection span.button {
@@ -111,6 +109,10 @@ div.barsection span.button {
   background: rgba(25,25,25,.9);
   cursor: pointer;
   margin-top: 5px;
+}
+
+div.barsection span.filter {
+  display: none;
 }
 
 div.barsection span.button:hover {
@@ -170,26 +172,52 @@ div.barsection img.selected {
   font-weight: bold;
 }
 
+#search { width: calc(100% - 1560px); }
+
 /* mobile view */
-@media screen and (max-width: 1785px) {
-  body { padding-top: 160px; }
+@media screen and (max-width: 1760px) {
+  /* update page padding for double panel */
+  body { padding-top: 150px; }
+
+  /* realign elements */
+  #search { width: calc(100% - 500px); }
+  #colors { float: right !important; }
+  #sort { float: right !important; }
+
+  /* make advanced visible and hide button*/
+  #types { display: inline-block; }
+  #sort { display: inline-block; }
 }
 
-@media screen and (max-width: 1087px) {
-  body { padding-top: 240px; }
+@media screen and (max-width: 1090px) {
+  /* revert page padding for single panel */
+  body { padding-top: 80px; }
+
+  /* show filter button and hide elements */
+  #filter { display: inline-block; }
+  #types { display: none; }
+  #sort { display: none; }
+
+  /* update frame positions */
+  #search input { width: calc(100% - 140px); }
+  #sort { float: left !important; }
+}
+
+@media screen and (max-width: 800px) {
+  /* update page padding for double panel */
+  body { padding-top: 150px; }
+
+  /* convert to full width search */
+  #search { width: 100%; float: left !important; }
+  #search input { width: calc(100% - 160px); }
 }
 
 </style>
 <body>
 <div id="navbar">
-  <img style="margin: 5px;" height="60" src="res/logo.png"/>
+  <img id="logo" style="margin: 5px; float: left;" height="60" src="res/logo.png"/>
 
-  <div class="barsection" style="flex-grow: 2">
-    Search:<br/>
-    <input id="search-text" type="text" onchange="setText()"/>
-  </div>
-
-  <div class="barsection">
+  <div class="barsection" style="float: left;" id="colors">
     Colors:<br/>
     <img class="filter" id="filter-w" onclick='setColor("w")' src="res/white.png"/>
     <img class="filter" id="filter-u" onclick='setColor("u")' src="res/blue.png"/>
@@ -200,7 +228,14 @@ div.barsection img.selected {
     <img class="filter" id="filter-m" onclick='setColor("m")' src="res/multi.png"/>
   </div>
 
-  <div class="barsection">
+   <div class="barsection" style="float: left;" id="search">
+    Search:<br/>
+    <input id="search-text" type="text" onchange="setText()"/>
+
+    <span class="types button filter" id="filter" onclick='toggleFilter(this)'>Advanced ▼</span>
+  </div>
+
+  <div class="barsection" id="types" style="float: left">
     Card-Type:<br/>
     <span class="types button selected" id="types-instant" onclick='setType("instant")'>Instant</span>
     <span class="types button selected" id="types-creature" onclick='setType("creature")'>Creature</span>
@@ -211,7 +246,7 @@ div.barsection img.selected {
     <span class="types button" id="types-land" onclick='setType("land")'>Land</span>
   </div>
 
-  <div class="barsection">
+  <div class="barsection" id="sort" style="float: right">
     Sort By:<br/>
     <span class="sort asc button selected" id="sort-name" onclick='setSort("name")'>Name<span id="sort-name-arrow">▼</span></span>
     <span class="sort asc button" id="sort-color" onclick='setSort("color")'>Color<span id="sort-color-arrow">▼</span></span>
@@ -242,6 +277,42 @@ div.barsection img.selected {
   let filtertext = ""
   let filtercolor = ""
   let filtertype = "instantcreaturesorceryartifactenchantmentplaneswalker"
+
+  window.onresize = function(self) {
+    let filter = document.getElementById('filter')
+    let types = document.getElementById('types')
+    let sort = document.getElementById('sort')
+
+    /* ensure visibility of advanced filters in full mode */
+    if (window.innerWidth >= 1090) {
+      types.style.display = "inline-block"
+      sort.style.display = "inline-block"
+      filter.classList.add("selected")
+    }
+
+    /* update filter button state */
+    if (types.style.display == "inline-block") {
+      filter.classList.add("selected")
+    } else {
+      filter.classList.remove("selected")
+    }
+  }
+
+  function toggleFilter(self) {
+    let types = document.getElementById('types')
+    let sort = document.getElementById('sort')
+
+    self.classList.remove("selected")
+
+    if (types.style.display == "inline-block") {
+      types.style.display = "none"
+      sort.style.display = "none"
+    } else {
+      types.style.display = "inline-block"
+      sort.style.display = "inline-block"
+      self.classList.add("selected")
+    }
+  }
 
   function previewHide() {
     let preview = document.getElementById('preview')
