@@ -109,6 +109,7 @@ div.barsection span.button {
   background: rgba(25,25,25,.9);
   cursor: pointer;
   margin-top: 5px;
+  font-size: 10pt;
 }
 
 div.barsection span.filter {
@@ -210,6 +211,12 @@ div.barsection img.selected {
   /* convert to full width search */
   #search { width: 100%; float: left !important; }
   #search input { width: calc(100% - 160px); }
+}
+
+@media screen and (max-width: 460px) {
+  div.barsection { padding: 5px 10px; font-size: 8pt;}
+  #navbar img { height: 18px; margin: 5px 1px; }
+  #logo { height: 45px !important; }
 }
 </style>
 <body>
