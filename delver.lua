@@ -13,7 +13,7 @@ function delver:LoadBackup()
   local metadata, images = {}, {}
   local id = 0
 
-  for card in sqlcards:nrows("SELECT * FROM cards;") do
+  for card in sqlcards:nrows("SELECT * FROM cards ORDER BY card;") do
     local scryfall, ccount = nil, card.quantity
     for delver in sqldelver:nrows("SELECT * FROM cards WHERE _id = " .. card.card .. ";") do
       scryfall = delver.scryfall_id
