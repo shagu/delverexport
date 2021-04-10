@@ -38,6 +38,7 @@ function mtgjson:Initialize(collection)
         collection[i].cmc = mtgjson.convertedManaCost
         collection[i].name = mtgjson.name
         collection[i].color = mtgjson.colorIdentity
+        collection[i].text = mtgjson.text
 
         -- try to get best multiverse
         if not collection[i].multiverse then
@@ -52,6 +53,7 @@ function mtgjson:Initialize(collection)
         for locale in sqlmtgjson:nrows("SELECT name, multiverseid FROM foreign_data WHERE uuid = '" .. mtgjson.uuid .. "' AND language = '" .. card.lang .. "'") do
           collection[i].name_lang = locale.name
           collection[i].imgurl_lang = locale.multiverseid and "https://gatherer.wizards.com/Handlers/Image.ashx?type=card&multiverseid=" .. locale.multiverseid
+          collection[i].text_lang = locale.text
         end
 
         -- read set data
