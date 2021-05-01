@@ -1,5 +1,7 @@
 # delverexport
 
+**Info: this project is now archived, as it has been replaced by [mtg-browser](https://github.com/shagu/mtg-browser).**
+
 This project is supposed to export a [Delver Lens](https://delverlab.com/) database into something readable on a PC. At a point where your MTG collection turns into a rather static amount of cards, this is a great way to export and browse your collection on a PC, and also to share it with friends who don't have an android phone.
 
 ## Dependencies
